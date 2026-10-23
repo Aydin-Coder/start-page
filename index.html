@@ -16,7 +16,6 @@
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
-    background: var(--bg);
     color: var(--text);
     font-family: courier;
     display: flex;
@@ -55,7 +54,6 @@
   .prompt span { color: var(--accent); white-space: nowrap; }
   input {
     flex: 1;
-    background: transparent;
     border: 0;
     outline: 0;
     color: var(--text);
@@ -127,8 +125,8 @@
     kr:   { url: "https://krunker.io" },
     cl:   { url: "https://claude.ai/new",    search: "https://claude.ai/new?q=" },
     gpt:  { url: "https://chatgpt.com",      search: "https://chatgpt.com/?q=" },
-    // Gemini has no built-in ?q= support, so the question is also copied to your clipboard (paste with Ctrl+V).
     gem:  { url: "https://gemini.google.com/app", search: "https://gemini.google.com/app?q=", copy: true },
+    disc:   { url: "https://discord.com/channels/@me" },
   };
 
   const input = document.getElementById("input");
