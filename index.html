@@ -18,7 +18,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: courier;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -84,11 +84,14 @@
   // "name" alone opens the site; "name something" searches it where a search URL is given.
   const shortcuts = {
     yt:  { url: "https://www.youtube.com",  search: "https://www.youtube.com/results?search_query=" },
+    youtube:  { url: "https://www.youtube.com",  search: "https://www.youtube.com/results?search_query=" },
     gh:  { url: "https://github.com",       search: "https://github.com/search?q=" },
+    github:  { url: "https://github.com",       search: "https://github.com/search?q=" },
     gm:  { url: "https://mail.google.com" },
+    mail:  { url: "https://mail.google.com" },
     maps:{ url: "https://maps.google.com",  search: "https://www.google.com/maps/search/" },
     wiki:{ url: "https://wikipedia.org",    search: "https://en.wikipedia.org/w/index.php?search=" },
-    r:   { url: "https://reddit.com",       search: "https://www.reddit.com/search/?q=" },
+    reddit:   { url: "https://reddit.com",       search: "https://www.reddit.com/search/?q=" },
     x:   { url: "https://x.com" },
   };
 
