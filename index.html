@@ -152,6 +152,12 @@
       input.value = "";
       return;
     }
+    if (value.toLowerCase() === "date") {
+      print("> $ date", "dim");
+      print(new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }), "accent");
+      input.value = "";
+      return;
+    }
 
     const target = resolve(value);
     print("> $ " + value, "dim");
