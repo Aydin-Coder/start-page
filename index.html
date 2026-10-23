@@ -72,7 +72,7 @@
       <p class="line dim">Hello Aydin.</p>
       <div id="output"></div>
       <div class="prompt">
-        <span> > ~ </span>
+        <span>> $ </span>
         <input id="input" type="text" autofocus autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Command">
       </div>
     </div>
@@ -92,6 +92,10 @@
     x:   { url: "https://x.com" },
     zombs:   { url: "https://zombsroyale.io" },
     kr:   { url: "https://krunker.io" },
+    cl:   { url: "https://claude.ai/new",    search: "https://claude.ai/new?q=" },
+    gpt:  { url: "https://chatgpt.com",      search: "https://chatgpt.com/?q=" },
+    // Gemini has no built-in ?q= support, so the question is also copied to your clipboard (paste with Ctrl+V).
+    gem:  { url: "https://gemini.google.com/app", search: "https://gemini.google.com/app?q=", copy: true },
   };
 
   const input = document.getElementById("input");
@@ -119,8 +123,9 @@
 
     if (shortcuts[key]) {
       const s = shortcuts[key];
+      if (term && s.copy && navigator.clipboard) navigator.clipboard.writeText(term).catch(() => {});
       if (term && s.search) return s.search + encodeURIComponent(term);
-      window.open(s, '_blank');
+      return s.url;
     }
     if (looksLikeUrl(q)) {
       return /^(https?:\/\/)/i.test(q) ? q : "https://" + q;
@@ -134,7 +139,7 @@
     if (!value) return;
 
     if (value.toLowerCase() === "help") {
-      print("~ $ help", "dim");
+      print("> $ help", "dim");
       print("Shortcuts:");
       for (const [k, s] of Object.entries(shortcuts)) {
         print("  " + k.padEnd(6) + s.url.replace("https://", "") + (s.search ? "   (add a search term)" : ""), "dim");
@@ -149,9 +154,10 @@
     }
 
     const target = resolve(value);
-    print("~ $ " + value, "dim");
+    print("> $ " + value, "dim");
     print("Opening " + target, "accent");
-    window.location.href = target;
+    window.open(target, "_blank");
+    input.value = "";
   });
 </script>
 </body>
