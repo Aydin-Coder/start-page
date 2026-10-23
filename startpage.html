@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>start</title>
+<style>
+  :root {
+    --bg: #14161a;
+    --win: #1b1e24;
+    --bar: #262a32;
+    --text: #d8dce3;
+    --dim: #7c8493;
+    --accent: #7fd1b9;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .terminal {
+    width: 100%;
+    max-width: 720px;
+    background: var(--win);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--bar);
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot:nth-child(1) { background: #ff5f57; }
+  .dot:nth-child(2) { background: #febc2e; }
+  .dot:nth-child(3) { background: #28c840; }
+  .title { margin-left: 8px; font-size: 13px; color: var(--dim); }
+  .body { padding: 20px; min-height: 280px; font-size: 16px; line-height: 1.6; }
+  .line { margin: 0 0 4px; white-space: pre-wrap; }
+  .dim { color: var(--dim); }
+  .accent { color: var(--accent); }
+  .prompt { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .prompt span { color: var(--accent); white-space: nowrap; }
+  input {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    color: var(--text);
+    font: inherit;
+    caret-color: var(--accent);
+    min-width: 0;
+  }
+</style>
+</head>
+<body>
+  <div class="terminal" onclick="input.focus()">
+    <div class="bar">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <div class="title">start — ~</div>
+    </div>
+    <div class="body">
+      <p class="line dim">Type a URL or keyword, then press Enter.</p>
+      <p class="line dim">Anything else is searched on Google. Type <span class="accent">help</span> to see shortcuts.</p>
+      <div id="output"></div>
+      <div class="prompt">
+        <span>~ $</span>
+        <input id="input" type="text" autofocus autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Command">
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Edit these to add your own keyword shortcuts.
+  // "name" alone opens the site; "name something" searches it where a search URL is given.
+  const shortcuts = {
+    yt:  { url: "https://www.youtube.com",  search: "https://www.youtube.com/results?search_query=" },
+    gh:  { url: "https://github.com",       search: "https://github.com/search?q=" },
+    gm:  { url: "https://mail.google.com" },
+    maps:{ url: "https://maps.google.com",  search: "https://www.google.com/maps/search/" },
+    wiki:{ url: "https://wikipedia.org",    search: "https://en.wikipedia.org/w/index.php?search=" },
+    r:   { url: "https://reddit.com",       search: "https://www.reddit.com/search/?q=" },
+    x:   { url: "https://x.com" },
+  };
+
+  const input = document.getElementById("input");
+  const output = document.getElementById("output");
+
+  function print(text, cls) {
+    const p = document.createElement("p");
+    p.className = "line " + (cls || "");
+    p.textContent = text;
+    output.appendChild(p);
+  }
+
+  function looksLikeUrl(s) {
+    if (/\s/.test(s)) return false;
+    if (/^https?:\/\//i.test(s)) return true;
+    if (/^localhost(:\d+)?(\/|$)/i.test(s)) return true;
+    return /^[^\s\/]+\.[a-z]{2,}(:\d+)?(\/.*)?$/i.test(s);
+  }
+
+  function resolve(raw) {
+    const q = raw.trim();
+    const [first, ...rest] = q.split(/\s+/);
+    const key = first.toLowerCase();
+    const term = rest.join(" ");
+
+    if (shortcuts[key]) {
+      const s = shortcuts[key];
+      if (term && s.search) return s.search + encodeURIComponent(term);
+      return s.url;
+    }
+    if (looksLikeUrl(q)) {
+      return /^(https?:\/\/)/i.test(q) ? q : "https://" + q;
+    }
+    return "https://www.google.com/search?q=" + encodeURIComponent(q);
+  }
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const value = input.value.trim();
+    if (!value) return;
+
+    if (value.toLowerCase() === "help") {
+      print("~ $ help", "dim");
+      print("Shortcuts:");
+      for (const [k, s] of Object.entries(shortcuts)) {
+        print("  " + k.padEnd(6) + s.url.replace("https://", "") + (s.search ? "   (add a search term)" : ""), "dim");
+      }
+      input.value = "";
+      return;
+    }
+    if (value.toLowerCase() === "clear") {
+      output.innerHTML = "";
+      input.value = "";
+      return;
+    }
+
+    const target = resolve(value);
+    print("~ $ " + value, "dim");
+    print("Opening " + target, "accent");
+    window.location.href = target;
+  });
+</script>
+</body>
+</html>
