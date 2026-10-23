@@ -69,10 +69,10 @@
       <div class="title">start — ~ Aydin</div>
     </div>
     <div class="body">
-      <p class="line dim">Type a URL or keyword, then press Enter.</p>
+      <p class="line dim">Hello Aydin.</p>
       <div id="output"></div>
       <div class="prompt">
-        <span>~ $</span>
+        <span>?? aydin@zen ~ % </span>
         <input id="input" type="text" autofocus autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Command">
       </div>
     </div>
@@ -83,18 +83,15 @@
   // "name" alone opens the site; "name something" searches it where a search URL is given.
   const shortcuts = {
     yt:  { url: "https://www.youtube.com",  search: "https://www.youtube.com/results?search_query=" },
-    youtube:  { url: "https://www.youtube.com",  search: "https://www.youtube.com/results?search_query=" },
     gh:  { url: "https://github.com",       search: "https://github.com/search?q=" },
-    github:  { url: "https://github.com",       search: "https://github.com/search?q=" },
     gm:  { url: "https://mail.google.com" },
     mail:  { url: "https://mail.google.com" },
     maps:{ url: "https://maps.google.com",  search: "https://www.google.com/maps/search/" },
     wiki:{ url: "https://wikipedia.org",    search: "https://en.wikipedia.org/w/index.php?search=" },
-    reddit:   { url: "https://reddit.com",       search: "https://www.reddit.com/search/?q=" },
+    red:   { url: "https://reddit.com",       search: "https://www.reddit.com/search/?q=" },
     x:   { url: "https://x.com" },
     zombs:   { url: "https://zombsroyale.io" },
-    krunker:   { url: "https://krunker.io" },
-    scratch:   { url: "https://scratch.mit.edu" },
+    kr:   { url: "https://krunker.io" },
   };
 
   const input = document.getElementById("input");
