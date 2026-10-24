@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Terminal | Zen</title>
+<title>Terminal | Start Page</title>
 <style>
   :root {
     --bg: #14161a;
@@ -23,10 +23,15 @@
     align-items: center;
     justify-content: center;
     padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
   }
   .terminal {
     width: 100%;
     max-width: 720px;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
     background: var(--win);
     border-radius: 10px;
     overflow: hidden;
@@ -47,7 +52,7 @@
   .dot:nth-child(2) { background: #febc2e; }
   .dot:nth-child(3) { background: #28c840; }
   .title { margin-left: 8px; font-size: 13px; color: var(--dim); }
-  .body { padding: 20px; min-height: 280px; font-size: 16px; line-height: 1.6; }
+  .body { padding: 20px; min-height: 280px; font-size: 16px; line-height: 1.6; overflow-y: auto; }
   .line { margin: 0 0 4px; white-space: pre-wrap; }
   .dim { color: var(--dim); }
   .accent { color: var(--accent); }
@@ -62,6 +67,14 @@
     font: inherit;
     caret-color: var(--accent);
     min-width: 0;
+    font-size: 16px; /* prevents iOS Safari from auto-zooming on focus */
+  }
+  @media (max-width: 480px) {
+    body { padding: 10px; }
+    .terminal { max-height: calc(100% - 4px); border-radius: 8px; }
+    .title { font-size: 12px; }
+    .body { padding: 14px; min-height: 0; font-size: 14px; }
+    .prompt span { font-size: 14px; }
   }
 .bg-image {
   background-image: url("Background.jpg");
@@ -80,17 +93,17 @@
 }
 .credit a {
   color: #15E615;
-  font-size: 12px;
+  font-size: 8px;
   -webkit-user-select: none; /* Safari */
   -ms-user-select: none; /* IE 10 and IE 11 */
   user-select: none; /* Standard syntax */
 }
 .credit a:hover {
-  color: #1e90FF;
+  color: #FF0000;
 }
 .credit p {
   color: #FFFFFF;
-  font-size: 12px;
+  font-size: 8px;
   -webkit-user-select: none; /* Safari */
   -ms-user-select: none; /* IE 10 and IE 11 */
   user-select: none; /* Standard syntax */
@@ -113,7 +126,6 @@
       </div>
     </div>
   </div>
-  <div class="credit"><p>  © aydincoder <a href="https://github.com/Aydin-Coder/start-page/">v1.2.5</a></p></div>
 <script>
   const shortcuts = {
     cl:   { url: "https://claude.ai/new",    search: "https://claude.ai/new?q=" },
