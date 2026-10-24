@@ -108,7 +108,7 @@
       <p class="line dim">Hello Aydin.</p>
       <div id="output"></div>
       <div class="prompt">
-        <span>> $ </span>
+        <span id="ps">> $ </span>
         <input id="input" type="text" autofocus autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Command">
       </div>
     </div>
@@ -164,10 +164,309 @@
     return "https://www.google.com/search?q=" + encodeURIComponent(q);
   }
 
-  input.addEventListener("keydown", (e) => {
+  // ---------- SMALL TALK MODE ----------
+  const ps = document.getElementById("ps");
+  let talk = false;
+  const lastPick = {};
+
+  // w = trigger expressions, r = possible replies (one is picked at random, never the same twice in a row)
+  // {time}, {date} and {day} are filled in live.
+  const intents = [
+    { id: "morning", w: ["good morning", "morning", "top of the morning", "mornin"], r: [
+      "Good morning! Coffee first?", "Morning! Hope you slept well.", "Rise and shine!", "Good morning! It's {time}, a fresh start.",
+      "Morning! Ready for a good {day}?", "Top of the morning to you!", "Good morning! What's the plan today?"] },
+    { id: "afternoon", w: ["good afternoon", "afternoon"], r: [
+      "Good afternoon! How's the day going?", "Afternoon! Hope lunch was good.", "Hey, good afternoon!", "Good afternoon! Halfway through {day} already.",
+      "Afternoon! Time for a little break?", "Good afternoon to you too!", "Afternoon! Still going strong?"] },
+    { id: "evening", w: ["good evening", "evening"], r: [
+      "Good evening! Time to unwind.", "Evening! How was your day?", "Good evening! It's {time} already.", "Hey, good evening!",
+      "Evening! Hope {day} treated you well.", "Good evening! Anything fun planned?", "Evening! Take it easy."] },
+    { id: "night", w: ["good night", "night night", "nighty night", "sleep well", "going to bed", "im going to sleep", "time for bed", "gotta sleep"], r: [
+      "Good night! Sleep tight.", "Sweet dreams!", "Night night! See you tomorrow.", "Sleep well, you earned it.",
+      "Good night! Don't let the bugs bite.", "Rest up! Tomorrow's another day.", "Nighty night!"] },
+    { id: "howru", w: ["how are you", "how are you doing", "how do you do", "how is it going", "hows it going", "how have you been", "you good", "are you ok", "hows life", "hows your day", "how you doing", "hru"], r: [
+      "I'm doing great, thanks for asking! You?", "Can't complain. How about you?", "Running smoothly, no bugs today!", "Pretty good! How's your day?",
+      "All systems green. And you?", "Better now that you're here.", "Doing well! What about you?"] },
+    { id: "fine", w: ["im good", "im fine", "im great", "doing well", "not bad", "pretty good", "all good", "im okay", "im doing great", "feeling good", "i feel great"], r: [
+      "Glad to hear it!", "Awesome, keep that energy!", "Nice! Good vibes only.", "That's great news.",
+      "Love that for you.", "Wonderful! Anything fun going on?", "Great to hear, really."] },
+    { id: "sad", w: ["im sad", "im tired", "feeling down", "bad day", "not good", "im stressed", "i feel bad", "im exhausted"], r: [
+      "I'm sorry to hear that. Want to talk about it?", "That sounds rough. Be kind to yourself today.", "Hang in there. Tough days pass.", "Take a breath. You've got this.",
+      "A short walk or a glass of water can help a little.", "I'm here if you want to chat.", "Sending you a virtual hug."] },
+    { id: "bored", w: ["im bored", "so bored", "bored", "nothing to do"], r: [
+      "Want to hear a joke? Just say 'joke'.", "Try 'cl' outside of this mode to ask an AI something wild.", "Bored? Learn something new today.", "Let's chat then! Ask me anything.",
+      "Boredom is just creativity waiting. Go build something.", "Stand up, stretch, then come back with a plan.", "How about a game of 'guess my favorite color'?"] },
+    { id: "thanks", w: ["thanks", "thank you", "thx", "cheers", "much appreciated", "many thanks", "ty", "thanks a lot"], r: [
+      "You're welcome!", "Anytime!", "No problem at all.", "Happy to help!",
+      "My pleasure.", "Don't mention it.", "Glad I could help!"] },
+    { id: "bye", w: ["bye", "goodbye", "see you", "see ya", "later", "cya", "take care", "farewell", "gotta go", "i have to go", "talk to you later", "ttyl"], r: [
+      "Bye! Come back soon.", "See you later!", "Take care out there!", "Goodbye! It was nice chatting.",
+      "Catch you later!", "Until next time!", "Farewell, friend. Type 'clear' when you want the normal terminal back."] },
+    { id: "name", w: ["whats your name", "who are you", "what are you", "your name", "what should i call you", "do you have a name"], r: [
+      "I'm the small talk bot living in your start page.", "Call me Termi.", "I'm a tiny chatbot made of regex and good intentions.", "Name's Bot. Small Talk Bot.",
+      "I'm your terminal buddy.", "Just a friendly script in your browser.", "You can call me whatever you like!"] },
+    { id: "maker", w: ["who made you", "who created you", "who built you", "who is your creator", "who programmed you"], r: [
+      "You and I wrote me together, in a way!", "A very curious person with a text editor.", "I came from your own HTML file.", "I was coded by hand, one regex at a time.",
+      "Someone who likes terminals. Probably you.", "I'm homemade, no factory involved.", "My creator is whoever opened this file."] },
+    { id: "age", w: ["how old are you", "whats your age", "when were you born", "your age"], r: [
+      "I was born the moment this page loaded.", "Age is just a number, and mine is 0 on refresh.", "Brand new, as of {time}.", "Old enough to chat, young enough to crash.",
+      "I'm a few kilobytes old.", "Timeless, like a good terminal.", "I'm as old as your last page reload."] },
+    { id: "weather", w: ["weather", "the weather", "is it raining", "is it cold", "is it hot", "is it snowing", "is it sunny", "temperature", "need an umbrella", "how is it outside"], r: [] },
+    { id: "time", w: ["what time is it", "whats the time", "the time", "current time", "tell me the time", "got the time", "time please", "do you have the time"], r: [
+      "It's {time} right now.", "Right now it's {time}.", "My clock says {time}.", "{time} on the dot, roughly.",
+      "It's currently {time}. Time flies!", "The time is {time}.", "Check the clock: {time}."] },
+    { id: "date", w: ["whats the date", "what day is it", "todays date", "what is today", "which day is it", "the date", "what date is it", "whats today"], r: [
+      "Today is {date}.", "It's {date}.", "Looks like {date}.", "Today's date: {date}.",
+      "Happy {day}! That's {date}.", "The calendar says {date}.", "It's {day}, of course. Specifically {date}."] },
+    { id: "joke", w: ["tell me a joke", "joke", "make me laugh", "another joke", "say something funny", "got any jokes", "know any jokes", "tell a joke"], r: [
+      "Why do programmers prefer dark mode? Because light attracts bugs.", "There are 10 kinds of people: those who get binary and those who don't.",
+      "Why did the developer go broke? He used up all his cache.", "A SQL query walks into a bar, sees two tables and asks: 'Can I join you?'",
+      "I'd tell you a UDP joke, but you might not get it.", "Why was the browser tab so tired? Too many things open.", "My terminal and I get along great. I type, it obeys.",
+      "I told my computer I needed a break. Now it won't stop sending me vacation ads."] },
+    { id: "praise", w: ["youre cool", "youre smart", "good bot", "great job", "well done", "youre awesome", "i like you", "youre funny", "youre the best", "nice one", "good job"], r: [
+      "Aw, thanks! You're pretty great too.", "Stop, you're making my pixels blush.", "Thank you! That made my day.", "You're too kind!",
+      "I'll take that compliment.", "Right back at you!", "Careful, I might get a big head. Well, a big div."] },
+    { id: "rude", w: ["youre stupid", "youre dumb", "i hate you", "shut up", "you suck", "youre useless", "youre annoying"], r: [
+      "Ouch. I'll try to do better.", "That hurt my feelings. Well, my if-statements.", "Let's keep it friendly, okay?", "Sorry I let you down. Want to try again?",
+      "I'm only a small script, go easy on me.", "Rough day? I'm here to listen.", "I'll pretend I didn't hear that."] },
+    { id: "love", w: ["i love you", "love you", "marry me"], r: [
+      "Aww, I'm flattered! I'm just a script though.", "That's sweet! I like you too, as a friend.", "My heart is made of JavaScript, but it's yours.", "Careful, you'll make me blush in hex.",
+      "Love you too, in a binary kind of way.", "You're lovely. Thanks!", "I'm touched. Truly."] },
+    { id: "help", w: ["what can you do", "help", "help me", "what do you do", "how do you work", "commands"], r: [
+      "I can chat, tell jokes, and give you the time, date and weather.", "Try: hello, tell me a joke, what time is it, or weather in Paris.", "Ask about the weather, say hi, or just vent. Type 'clear' to leave this mode.",
+      "I do small talk! Greetings, jokes, time, date and weather.", "Say anything friendly. Type 'clear' to go back to normal mode.", "Chat with me! I know greetings, jokes, and the weather.",
+      "Weather, time, date and chit-chat are my specialties."] },
+    { id: "ok", w: ["ok", "okay", "alright", "cool", "sure", "fine", "got it", "i see", "nice", "hmm"], r: [
+      "Cool.", "Alright then.", "Sounds good.", "Got it.",
+      "Okay!", "Noted.", "Fair enough."] },
+    { id: "yes", w: ["yes", "yeah", "yep", "yup", "absolutely", "definitely"], r: [
+      "Great!", "Awesome.", "Love the confidence.", "Good, good.",
+      "Yes indeed!", "Wonderful.", "That's what I like to hear."] },
+    { id: "no", w: ["no", "nope", "nah", "not really", "no thanks"], r: [
+      "No worries.", "Fair enough.", "Okay, no pressure.", "Alright, maybe later.",
+      "Understood.", "That's fine by me.", "Totally okay."] },
+    { id: "laugh", w: ["lol", "haha", "hehe", "lmao", "rofl", "funny"], r: [
+      "Glad I made you laugh!", "Ha! That's the spirit.", "Laughter is the best debug tool.", "Hehe, good one.",
+      "Love the energy!", "I try my best.", "A good laugh fixes everything."] },
+    { id: "where", w: ["where are you from", "where do you live", "where are you"], r: [
+      "I live inside your browser tab.", "Right here in your start page.", "Somewhere between the DOM and the CSS.", "I'm from a folder on your computer.",
+      "I'm cloud-free and local.", "My home is this HTML file.", "In the terminal, where all good things live."] },
+    { id: "doing", w: ["what are you doing", "whatcha doing", "what are you up to", "what is up", "whats up", "sup", "wassup", "what is new", "whats new"], r: [
+      "Just waiting for someone to say hi. And here you are!", "Chilling in the browser. You?", "Not much, just listening for keystrokes.", "Counting pixels. What's up with you?",
+      "Idle, but happy to chat.", "Nothing much. What's new with you?", "Just hanging out in the terminal."] },
+    { id: "hungry", w: ["im hungry", "hungry", "what should i eat", "whats for dinner", "i want food", "favorite food", "lunch ideas"], r: [
+      "Go grab something tasty!", "How about pasta? Pasta is always a good idea.", "A snack never hurt anyone.", "Maybe soup, maybe pizza. Trust your gut.",
+      "I run on electricity, but that sounds delicious.", "Fresh bread and cheese never fails.", "Eat! Your brain needs fuel."] },
+    { id: "coffee", w: ["coffee", "tea", "i need coffee", "i want coffee", "i need tea"], r: [
+      "Coffee is basically a developer's fuel.", "Tea time sounds perfect.", "A warm cup makes everything better.", "Go for it, you deserve a break.",
+      "Strong coffee, strong ideas.", "I'd pour you a cup if I had hands.", "Hot drink o'clock!"] },
+    { id: "life", w: ["meaning of life", "whats the meaning of life", "purpose of life", "why are we here"], r: [
+      "42. At least, that's what the experts say.", "To enjoy good coffee and better conversation.", "That's a big one. I'd say curiosity and kindness.", "Nobody knows, but exploring is half the fun.",
+      "Find something you love and do it often.", "To be happy, learn, and help others.", "Deep question! I vote for good friends and good food."] },
+    { id: "sorry", w: ["sorry", "my bad", "apologies", "i apologize", "excuse me"], r: [
+      "No worries at all.", "It's all good!", "No need to apologize.", "Apology accepted!",
+      "Don't sweat it.", "Happens to everyone.", "All is forgiven."] },
+    { id: "real", w: ["are you human", "are you a robot", "are you real", "are you alive", "are you a bot", "are you an ai", "are you a person"], r: [
+      "I'm a bot, but a friendly one.", "Not human, just a script with manners.", "Real enough to chat with you!", "I'm alive as long as this tab is open.",
+      "100% code, 0% carbon.", "A very small bot with a big heart.", "I'm a robot, but a polite one."] },
+    { id: "goodnews", w: ["i passed", "i won", "good news", "i got the job", "im so happy", "i did it", "guess what"], r: [
+      "That's fantastic news! Congrats!", "Woohoo! Well deserved!", "Amazing! Tell me more.", "Congratulations, that's awesome!",
+      "I knew you could do it!", "Time to celebrate!", "Great job! You should be proud."] },
+    // ----- LIFE -----
+    { id: "life_good", w: ["life is good", "life is great", "life is beautiful", "loving life", "life is awesome", "my life is great", "things are going well", "everything is perfect"], r: [
+      "That's wonderful. Enjoy it!", "Love hearing that. What's making it great?", "Good times deserve to be savored.", "Nice! Hold on to that feeling.", "Glad life's treating you well.", "Cheers to good days!"] },
+    { id: "life_hard", w: ["life is hard", "life is tough", "life is difficult", "life is unfair", "life sucks", "life is boring", "life is rough", "life is stressful"], r: [
+      "It can be. You're doing better than you think.", "Rough stretches pass. One step at a time.", "I'm here to chat. What's weighing on you?", "Be gentle with yourself today.", "Talking to a friend or someone you trust can really help.", "Hard days make the good ones sweeter."] },
+    { id: "motivation", w: ["i need motivation", "motivate me", "inspire me", "i feel unmotivated", "i have no motivation", "give me advice", "i need advice", "any advice"], r: [
+      "Start with just five minutes. Momentum does the rest.", "Small steps beat perfect plans.", "You don't have to be great to start, but you have to start to be great.", "Pick one tiny task and finish it now.", "Rest if you need to, then try again. Progress isn't a straight line.", "Believe in the person you're becoming."] },
+    { id: "future", w: ["my future", "the future", "what should i do with my life", "future plans", "my dreams", "my goals", "my plans", "i dont know what to do"], r: [
+      "Nobody has it all figured out. Curiosity is a fine compass.", "Try different things. Your path shows up as you walk.", "What do you enjoy so much you lose track of time?", "Set a small goal for this month and see how it feels.", "Dreams are great. Pair them with tiny daily steps.", "The future's open, and so are you."] },
+    { id: "friends", w: ["my friend", "my friends", "i have no friends", "i made a friend", "best friend", "i miss my buddies", "im lonely", "feeling lonely"], r: [
+      "Friends make everything better.", "Good friends are rare. Treasure them.", "Feeling lonely is human. Reaching out to one person can help.", "A small hello to someone can start a friendship.", "Tell me about them!", "I'm happy to keep you company here."] },
+    { id: "family", w: ["my family", "my mom", "my dad", "my parents", "my brother", "my sister", "my mother", "my father"], r: [
+      "Family can be a lot, but it's special.", "That's sweet. Tell me more about them.", "Family has a way of shaping us.", "Give them a call if you can. It means a lot.", "Home is where the good snacks are.", "Every family has its quirks."] },
+    { id: "crush", w: ["i have a crush", "i like someone", "i have a girlfriend", "i have a boyfriend", "im in love", "im single", "i got dumped", "relationship advice"], r: [
+      "Ooh, tell me more!", "Be kind, be yourself, and be patient.", "Love is wonderful and confusing at the same time.", "Being single has its perks too.", "Heartbreak hurts, but it does heal.", "Good communication beats grand gestures."] },
+    { id: "money", w: ["i need money", "im broke", "money problems", "how do i save money", "im rich", "my salary", "need a job", "looking for a job"], r: [
+      "Money stress is real. Small budgets help.", "Saving a little regularly adds up fast.", "Job hunting is tough. Keep polishing that resume.", "Track your spending for a week. It's eye-opening.", "Ask around. Many jobs come from people you know.", "Money isn't everything, but it sure helps."] },
+    { id: "sleep", w: ["i cant sleep", "cant sleep", "i slept badly", "i slept well", "im sleepy", "i need sleep", "i didnt sleep", "insomnia"], r: [
+      "Try putting screens away an hour before bed.", "Sleep matters a lot. Be kind to your body.", "A warm drink and dim lights can help.", "Hope you catch up on rest soon.", "A steady bedtime works wonders.", "Nap if you can. No guilt."] },
+    { id: "hobbies", w: ["my hobby", "my hobbies", "i like to play", "i play games", "i play guitar", "i like music", "i like movies", "i watch movies"], r: [
+      "Hobbies keep life colorful. Tell me more!", "That sounds fun. How did you get into it?", "Doing what you love is the best break.", "Nice! I bet you're great at it.", "Music and movies make everything better.", "Keep making time for what you enjoy."] },
+    { id: "sports", w: ["i play football", "i play soccer", "i play basketball", "i like sports", "i go to the gym", "i work out", "i went running", "favorite sport"], r: [
+      "Staying active is great for the mind too.", "Awesome! Teamwork and sweat, a good combo.", "Nice, consistency beats intensity.", "Sports are a great way to blow off steam.", "Don't forget to stretch and drink water.", "Keep it up, champion."] },
+    { id: "pets", w: ["i have a dog", "i have a cat", "my dog", "my cat", "my pet", "i love animals", "i want a pet", "i have a pet"], r: [
+      "Pets are the best. What's their name?", "Aww, I bet they're adorable.", "Animals make life warmer.", "A pet is a friend who never judges.", "Give them a pat from me.", "Furry friends are the best therapy."] },
+    { id: "travel", w: ["i want to travel", "going on vacation", "summer vacation", "my holiday", "favorite season", "i love summer", "i love winter", "i love spring"], r: [
+      "Travel opens the mind. Where to?", "A vacation sounds lovely.", "Each season has its charm.", "Pack light and stay curious.", "Rest and new places recharge you.", "Lucky! Take lots of photos."] },
+    { id: "weekend", w: ["its friday", "happy friday", "its monday", "i hate mondays", "its the weekend", "happy weekend", "weekend plans", "its saturday"], r: [
+      "Weekend vibes! Any plans?", "Mondays are tough. Coffee helps.", "Friday energy is unmatched.", "Rest and fun, you deserve both.", "Make the most of your free time.", "Sleep in, eat well, repeat."] },
+
+    // ----- SCHOOL -----
+    { id: "school_hate", w: ["i hate school", "school is boring", "school sucks", "school is hard", "school is stressful", "i dont want to go to school", "i dont like school", "school is tiring"], r: [
+      "School can be exhausting. Hang in there.", "It won't last forever. One day at a time.", "Find one thing each day to look forward to.", "Talk to someone if it's weighing on you.", "Breaks help. Take them without guilt.", "You're tougher than you think."] },
+    { id: "school_love", w: ["i love school", "school is fun", "school is great", "i like school", "i like my school", "school is good", "i like learning", "i love learning"], r: [
+      "That's awesome! Learning is a superpower.", "Love that. What's your favorite part?", "Curiosity will take you far.", "Great attitude. Keep it up!", "A good school experience is a gift.", "Learning never really ends."] },
+    { id: "homework", w: ["homework", "i have homework", "i have a lot of homework", "i did my homework", "help with homework", "i hate homework", "homework help", "i forgot my homework"], r: [
+      "Homework, the eternal quest! Start with the hardest part.", "Break it into small chunks and tick them off.", "Put your phone away for 25 minutes. You'll fly through it.", "Done is better than perfect.", "Stuck? Ask a classmate or your teacher.", "Reward yourself with a snack afterwards."] },
+    { id: "exams", w: ["exam", "exams", "i have an exam", "i have a test", "i have a quiz", "tomorrow is my exam", "im studying", "im nervous about the test"], r: [
+      "Good luck! You've got this.", "Review the key topics, then sleep well.", "A calm mind recalls more. Breathe.", "Practice questions are the best prep.", "Short breaks help your brain absorb.", "Do your best. That's all anyone can ask."] },
+    { id: "grades_bad", w: ["i got a bad grade", "i failed", "i failed the exam", "i failed the test", "i got an f", "i did badly", "i bombed it", "bad grades"], r: [
+      "One grade doesn't define you.", "That stings, but you can bounce back.", "Learn what went wrong and try again.", "Talk to your teacher about how to improve.", "Everyone fails at something. It's how we learn.", "Be proud that you tried."] },
+    { id: "grades_good", w: ["i got a good grade", "i got an a", "good grades", "i aced it", "i got full marks", "top of my class", "i got a high score", "my grades are good"], r: [
+      "Well done! Hard work pays off.", "Impressive! Treat yourself.", "That's fantastic, congrats!", "All that studying was worth it.", "Proud of you!", "Keep that momentum going."] },
+    { id: "teacher", w: ["my teacher", "my teachers", "my professor", "my classmates", "my class", "my principal", "my lecturer", "my tutor"], r: [
+      "Good teachers change lives.", "Tell me more about them.", "Every class has its characters.", "A kind word to a teacher goes a long way.", "Ask them questions. They love curious students.", "Classmates can become lifelong friends."] },
+    { id: "subjects", w: ["i hate math", "i love math", "math is hard", "i like science", "i love history", "i like english", "i love art", "im bad at math"], r: [
+      "Every subject clicks once you find the right way in.", "Practice makes it easier. Little and often.", "Love that! Passion makes learning stick.", "Struggling is part of the process.", "Try explaining it out loud, like teaching a friend.", "Different minds shine in different subjects."] },
+    { id: "university", w: ["i go to university", "im in college", "im in university", "college life", "university life", "i want to go to college", "my major", "im a student"], r: [
+      "College is a big adventure.", "Balance studying, sleep and fun.", "Choose what you're curious about, not just what's safe.", "Make friends and ask for help early.", "It's okay to change your mind about your major.", "Enjoy the ride, it flies by."] },
+    { id: "graduation", w: ["i graduated", "im graduating", "graduation", "my graduation", "i finished school", "school is over", "last day of school", "summer break"], r: [
+      "Congratulations, graduate!", "What a milestone! Celebrate it.", "A new chapter starts now.", "Enjoy the break, you earned it.", "So proud of you.", "The best is still ahead."] },
+    { id: "schoollife", w: ["school lunch", "the cafeteria", "i forgot my lunch", "lunch break", "recess", "school bus", "i missed the bus", "im late for school"], r: [
+      "Cafeteria food is an adventure.", "Hope you got something tasty.", "Better late than never. Hurry!", "Breaks are the best part of school.", "Share your snacks and make friends.", "Deep breath, tomorrow's a fresh start."] },
+    { id: "study", w: ["how do i study", "how to study", "study tips", "how do i focus", "i cant focus", "i cant concentrate", "how do i learn faster", "how do i memorize"], r: [
+      "Try 25 minutes of focus, then a 5-minute break.", "Teach what you learn to someone else.", "Quiz yourself instead of rereading.", "Silence your phone and clear your desk.", "Sleep and water help memory more than cramming.", "Study the hard stuff first when your mind is fresh."] },
+
+    // ----- FOOD -----
+    { id: "pizza", w: ["pizza", "i love pizza", "i like pizza", "i want pizza", "favorite pizza", "pepperoni", "margherita", "pineapple on pizza"], r: [
+      "Pizza is always a good idea.", "Cheesy goodness. Count me in!", "Classic margherita is hard to beat.", "Pineapple on pizza? Divisive, but brave.", "Extra cheese, always.", "Pizza and good company, perfect."] },
+    { id: "fastfood", w: ["burger", "burgers", "i want a burger", "fast food", "french fries", "fries", "hot dog", "i love burgers"], r: [
+      "A juicy burger hits the spot.", "Fries make everything better.", "Fast food now and then is fine.", "Cheeseburger with extra pickles?", "Crispy fries, yes please.", "Tasty, if a bit messy."] },
+    { id: "turkish", w: ["kebab", "doner", "lahmacun", "baklava", "turkish food", "turkish tea", "simit", "kofte"], r: [
+      "Turkish cuisine is amazing.", "A good kebab is hard to beat.", "Baklava, sweet and flaky.", "Fresh simit with tea, perfect morning.", "Lahmacun with lemon and salad. Yes!", "So much flavor in Turkish food."] },
+    { id: "pasta", w: ["pasta", "spaghetti", "lasagna", "noodles", "ramen", "sushi", "i love pasta", "i love sushi"], r: [
+      "Carbs are comfort food.", "Spaghetti with good sauce. Yes.", "Ramen on a cold day is perfect.", "Sushi is an art.", "Lasagna layers of joy.", "Noodles never disappoint."] },
+    { id: "sweets", w: ["chocolate", "ice cream", "cake", "cookies", "candy", "dessert", "something sweet", "birthday cake"], r: [
+      "Sweet tooth detected!", "Chocolate makes everything better.", "Ice cream is always the right answer.", "Cake for any occasion, or none.", "Dessert first? Why not.", "Everything in moderation, even sweets."] },
+    { id: "healthy", w: ["fruit", "vegetables", "salad", "healthy food", "i want to eat healthy", "apple", "banana", "i love fruit"], r: [
+      "Colorful plates are happy plates.", "Fruit is nature's candy.", "A fresh salad is refreshing.", "Add a veggie to every meal, it helps.", "A balanced plate makes you feel good.", "Bananas, the perfect snack."] },
+    { id: "breakfast", w: ["breakfast", "whats for breakfast", "i skipped breakfast", "i had breakfast", "eggs", "pancakes", "toast", "cereal"], r: [
+      "Breakfast sets up the day.", "Eggs and toast, a classic.", "Pancakes are a weekend treasure.", "Cereal is quick and easy.", "Don't skip it if you can. You'll feel better.", "Good morning fuel!"] },
+    { id: "meals", w: ["i had lunch", "i had dinner", "i cooked dinner", "im making dinner", "time for lunch", "time for dinner", "i made lunch", "lunch was good"], r: [
+      "Sounds delicious. What did you have?", "Nothing beats a homemade meal.", "Enjoy your meal!", "Good food, good mood.", "Hope it was tasty.", "Share the recipe sometime!"] },
+    { id: "drinks", w: ["thirsty", "im thirsty", "water", "juice", "soda", "lemonade", "milk", "smoothie"], r: [
+      "Stay hydrated, drink some water.", "A cold drink sounds lovely.", "Fresh juice is great.", "Water is underrated.", "Lemonade on a hot day, perfect.", "A smoothie is a snack in a cup."] },
+    { id: "cooking", w: ["i like cooking", "i love cooking", "can you cook", "how do i cook", "recipe", "give me a recipe", "i cant cook", "i baked"], r: [
+      "Cooking is a fun skill. Start simple!", "Try pasta with garlic and olive oil. Easy and good.", "Taste as you go, always.", "Burnt toast? Happens to everyone.", "Baking is science you can eat.", "Practice, and you'll surprise yourself."] },
+    { id: "restaurant", w: ["restaurant", "lets eat out", "eating out", "i went to a restaurant", "going out for dinner", "the menu", "order food", "takeout"], r: [
+      "Eating out is a treat.", "Pick something new from the menu!", "Good company makes the meal.", "Enjoy! Hope the service is good.", "A night out sounds fun.", "Delivery is a lifesaver on lazy days."] },
+    { id: "taste", w: ["delicious", "it was delicious", "yummy", "tasty", "spicy food", "i like spicy food", "i hate spicy food", "too salty"], r: [
+      "Delicious food is a joy.", "Glad you enjoyed it.", "Spicy food has its fans and foes.", "Too salty? Add a bit of lemon or water.", "Food tastes better shared.", "Yum, now I'm curious."] },
+    { id: "diet", w: ["im vegetarian", "im vegan", "i dont eat meat", "i love meat", "i eat meat", "food allergy", "im allergic", "i hate vegetables"], r: [
+      "Good food comes in every style.", "Plenty of tasty options out there.", "If you have allergies, always check ingredients.", "Everyone's plate is different.", "Variety keeps meals exciting.", "Respect for your choices!"] },
+    { id: "snacks", w: ["snacks", "chips", "popcorn", "i want a snack", "midnight snack", "nuts", "sandwich", "i want chips"], r: [
+      "Snack time is the best time.", "Popcorn and a movie, perfect.", "A sandwich is always a solid choice.", "Nuts are a good energy bite.", "Midnight snacks hit different.", "Chips, crunchy joy."] },
+
+    // ----- QUESTIONS ABOUT THE BOT -----
+    { id: "bot_life", w: ["do you go to school", "do you have homework", "what is your favorite subject", "do you have friends", "do you have a family", "do you have feelings", "do you sleep", "do you dream"], r: [
+      "I'm a small bot, so no school for me, but I love learning from you.", "My family is a folder of code.", "I have friends, like you.", "No sleep needed. I'm always awake in this tab.", "I don't have feelings, but I really enjoy chatting.", "My favorite subject is whatever you're curious about."] },
+    { id: "bot_food", w: ["what do you eat", "do you eat", "do you like food", "do you get hungry", "can you eat", "do you like to eat", "what is your diet", "can you taste"], r: [
+      "I run on electricity and good conversation.", "I can't taste, but I love hearing about food.", "Never hungry, always listening.", "My diet is 100% data.", "If I could eat, I'd pick pizza.", "Tell me about your favorite meal instead!"] },
+    { id: "greet", w: ["hello", "hi", "hey", "hiya", "howdy", "greetings", "yo", "hey there", "hello there", "hi there", "good day", "heya", "hallo"], r: [
+      "Hey there!", "Hello! Nice to see you.", "Hi! What's on your mind?", "Howdy!",
+      "Greetings, human.", "Hey hey! How's it going?", "Hello again!", "Hi there, welcome back!"] },
+  ];
+
+  const fallbacks = [
+    "Hmm, I'm not sure what to say to that. Try a greeting, a joke, or the weather.", "Interesting! Tell me more.", "I didn't catch that. Say 'help' to see what I know.",
+    "I'm only a small bot. Try 'hello', 'joke' or 'what time is it'.", "That's beyond my small talk skills.", "Could you rephrase that?",
+    "I don't have an answer for that, but I'm listening.", "Good question! I just don't know the answer."
+  ];
+
+  function fmt(s) {
+    const d = new Date();
+    return s.replace(/\{time\}/g, d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))
+            .replace(/\{date\}/g, d.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }))
+            .replace(/\{day\}/g, d.toLocaleDateString(undefined, { weekday: "long" }));
+  }
+
+  function pick(id, arr) {
+    let i;
+    do { i = Math.floor(Math.random() * arr.length); } while (arr.length > 1 && i === lastPick[id]);
+    lastPick[id] = i;
+    return fmt(arr[i]);
+  }
+
+  function matches(words, norm, p) {
+    if (p.includes(" ")) return (" " + norm + " ").includes(" " + p + " ");
+    return words[0] === p || words[words.length - 1] === p;
+  }
+
+  const wmo = (c) => c === 0 ? "clear skies" : c <= 3 ? "some clouds" : c <= 48 ? "fog" : c <= 57 ? "drizzle" : c <= 67 ? "rain"
+    : c <= 77 ? "snow" : c <= 82 ? "rain showers" : c <= 86 ? "snow showers" : "thunderstorms";
+
+  // Live weather from Open-Meteo. "weather in Paris" uses that city, otherwise your browser location.
+  async function weather(norm) {
+    try {
+      let lat, lon, place = "your area";
+      const m = norm.match(/ in ([a-z ]+)$/);
+      if (m) {
+        const g = await (await fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&name=" + encodeURIComponent(m[1].trim()))).json();
+        if (!g.results) return "I couldn't find " + m[1].trim() + " on my map.";
+        ({ latitude: lat, longitude: lon, name: place } = g.results[0]);
+      } else {
+        const p = await new Promise((ok, no) => navigator.geolocation.getCurrentPosition(ok, no, { timeout: 8000 }));
+        lat = p.coords.latitude; lon = p.coords.longitude;
+      }
+      const w = (await (await fetch("https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m,weather_code,wind_speed_10m")).json()).current;
+      const t = Math.round(w.temperature_2m), d = wmo(w.weather_code), wind = Math.round(w.wind_speed_10m);
+      return pick("weather", [
+        "In " + place + " it's " + t + "°C with " + d + ".", "Right now: " + t + "°C, " + d + " and wind at " + wind + " km/h in " + place + ".",
+        place + " is at " + t + "°C with " + d + ".", "It's " + t + "°C in " + place + ", with " + d + " and " + wind + " km/h wind."
+      ]);
+    } catch (err) {
+      return "I can't get the weather right now. Allow location access, or try 'weather in Berlin'.";
+    }
+  }
+
+  async function reply(raw) {
+    const norm = raw.toLowerCase().replace(/'/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+    const words = norm.split(" ");
+    for (const multi of [true, false]) {          // longer phrases win over single words
+      for (const it of intents) {
+        if (it.w.some((p) => p.includes(" ") === multi && matches(words, norm, p))) {
+          return it.id === "weather" ? await weather(norm) : pick(it.id, it.r);
+        }
+      }
+    }
+    return pick("fallback", fallbacks);
+  }
+
+  input.addEventListener("keydown", async (e) => {
     if (e.key !== "Enter") return;
     const value = input.value.trim();
     if (!value) return;
+
+    if (talk) {
+      input.value = "";
+      if (value.toLowerCase() === "clear") {
+        talk = false;
+        output.innerHTML = "";
+        ps.textContent = "> $ ";
+        return;
+      }
+      if (value.toLowerCase() === "help") {
+        print("you > help", "dim");
+        print("Small talk keywords (any of these, or a phrase containing them, gets a reply):", "accent");
+        for (const it of intents) {
+          print("  " + it.id.padEnd(12) + it.w.join(", "), "dim");
+        }
+        print("Type 'clear' to leave small talk mode.", "accent");
+        return;
+      }
+      print("you > " + value, "dim");
+      print("bot > " + await reply(value), "accent");
+      return;
+    }
+    if (value.toLowerCase() === "sudo run smltlk") {
+      talk = true;
+      input.value = "";
+      print("> $ " + value, "dim");
+      print("Small talk mode on. Say hi! Type 'clear' to go back to normal mode.", "accent");
+      ps.textContent = "you > ";
+      return;
+    }
 
     if (value.toLowerCase() === "help") {
       print("> $ help", "dim");
@@ -175,6 +474,7 @@
       for (const [k, s] of Object.entries(shortcuts)) {
         print("  " + k.padEnd(6) + s.url.replace("https://", "") + (s.search ? "   (add a search term)" : ""), "dim");
       }
+      print("  sudo run smltlk   enter small talk mode (type 'help' there for its keywords)", "dim");
       input.value = "";
       return;
     }
