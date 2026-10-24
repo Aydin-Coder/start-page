@@ -363,6 +363,10 @@
       "I'm a small bot, so no school for me, but I love learning from you.", "My family is a folder of code.", "I have friends, like you.", "No sleep needed. I'm always awake in this tab.", "I don't have feelings, but I really enjoy chatting.", "My favorite subject is whatever you're curious about."] },
     { id: "bot_food", w: ["what do you eat", "do you eat", "do you like food", "do you get hungry", "can you eat", "do you like to eat", "what is your diet", "can you taste"], r: [
       "I run on electricity and good conversation.", "I can't taste, but I love hearing about food.", "Never hungry, always listening.", "My diet is 100% data.", "If I could eat, I'd pick pizza.", "Tell me about your favorite meal instead!"] },
+    // ----- QUOTES -----
+    // GoT/ASOIAF triggers are multi-word phrases, so they always win over the single word "quote" below.
+    { id: "got_quote", w: ["got quote", "asoiaf quote", "game of thrones quote", "thrones quote", "a song of ice and fire quote", "quote from game of thrones", "quote from thrones"], r: [] },
+    { id: "philosophy_quote", w: ["quote", "quotes", "a quote", "give me a quote", "philosophy quote", "philosopher quote", "wise quote", "deep quote", "inspirational quote", "random quote", "say something wise", "something philosophical"], r: [] },
     { id: "greet", w: ["hello", "hi", "hey", "hiya", "howdy", "greetings", "yo", "hey there", "hello there", "hi there", "good day", "heya", "hallo"], r: [
       "Hey there!", "Hello! Nice to see you.", "Hi! What's on your mind?", "Howdy!",
       "Greetings, human.", "Hey hey! How's it going?", "Hello again!", "Hi there, welcome back!"] },
@@ -420,13 +424,45 @@
     }
   }
 
+  // Random philosopher quote, with the philosopher's name and the year, from philosophersapi.com.
+  async function philosopherQuote() {
+    try {
+      const list = await (await fetch("https://philosophersapi.com/api/quotes")).json();
+      const q = list[Math.floor(Math.random() * list.length)];
+      let name = "Unknown philosopher";
+      if (q.philosopher && q.philosopher.id) {
+        const p = await (await fetch("https://philosophersapi.com/api/philosophers/" + q.philosopher.id)).json();
+        if (p && p.name) name = p.name;
+      }
+      const year = (q.year || "").trim() || "year unknown";
+      return "\u201C" + q.quote + "\u201D \u2014 " + name + " (" + year + ")";
+    } catch (err) {
+      return "I can't reach the philosophers API right now. Try again in a bit.";
+    }
+  }
+
+  // Random Game of Thrones / ASOIAF quote, with the character, from gameofthronesquotes.xyz.
+  async function gotQuote() {
+    try {
+      const q = await (await fetch("https://api.gameofthronesquotes.xyz/v1/random")).json();
+      const sentence = q.sentence || q.quote || "";
+      const name = (q.character && q.character.name) || "Unknown character";
+      return "\u201C" + sentence + "\u201D \u2014 " + name;
+    } catch (err) {
+      return "I can't reach the Game of Thrones quotes API right now. Try again in a bit.";
+    }
+  }
+
   async function reply(raw) {
     const norm = raw.toLowerCase().replace(/'/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
     const words = norm.split(" ");
     for (const multi of [true, false]) {          // longer phrases win over single words
       for (const it of intents) {
         if (it.w.some((p) => p.includes(" ") === multi && matches(words, norm, p))) {
-          return it.id === "weather" ? await weather(norm) : pick(it.id, it.r);
+          if (it.id === "weather") return await weather(norm);
+          if (it.id === "got_quote") return await gotQuote();
+          if (it.id === "philosophy_quote") return await philosopherQuote();
+          return pick(it.id, it.r);
         }
       }
     }
