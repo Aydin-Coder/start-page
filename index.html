@@ -115,23 +115,19 @@
   </div>
   <div class="credit"><p>   Background Image by <a href="https://unsplash.com/@nathananderson">Nathan Anderson </a></p></div>
 <script>
-  // Edit these to add your own keyword shortcuts.
-  // "name" alone opens the site; "name something" searches it where a search URL is given.
   const shortcuts = {
-    yt:  { url: "https://www.youtube.com",  search: "https://www.youtube.com/results?search_query=" },
+    cl:   { url: "https://claude.ai/new",    search: "https://claude.ai/new?q=" },
+    gem:  { url: "https://gemini.google.com/app", search: "https://gemini.google.com/app?q=", copy: true },
     gh:  { url: "https://github.com",       search: "https://github.com/search?q=" },
     gm:  { url: "https://mail.google.com" },
+    gpt:  { url: "https://chatgpt.com",      search: "https://chatgpt.com/?q=" },
+    kr:   { url: "https://krunker.io" },
     mail:  { url: "https://mail.google.com" },
     maps:{ url: "https://maps.google.com",  search: "https://www.google.com/maps/search/" },
-    wiki:{ url: "https://wikipedia.org",    search: "https://en.wikipedia.org/w/index.php?search=" },
     red:   { url: "https://reddit.com",       search: "https://www.reddit.com/search/?q=" },
+    wiki:{ url: "https://wikipedia.org",    search: "https://en.wikipedia.org/w/index.php?search=" },
     x:   { url: "https://x.com" },
-    zombs:   { url: "https://zombsroyale.io" },
-    kr:   { url: "https://krunker.io" },
-    cl:   { url: "https://claude.ai/new",    search: "https://claude.ai/new?q=" },
-    gpt:  { url: "https://chatgpt.com",      search: "https://chatgpt.com/?q=" },
-    // Gemini has no built-in ?q= support, so the question is also copied to your clipboard (paste with Ctrl+V).
-    gem:  { url: "https://gemini.google.com/app", search: "https://gemini.google.com/app?q=", copy: true },
+    yt:  { url: "https://www.youtube.com",  search: "https://www.youtube.com/results?search_query=" },
   };
 
   const input = document.getElementById("input");
