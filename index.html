@@ -367,6 +367,25 @@
     // GoT/ASOIAF triggers are multi-word phrases, so they always win over the single word "quote" below.
     { id: "got_quote", w: ["got quote", "asoiaf quote", "game of thrones quote", "thrones quote", "a song of ice and fire quote", "quote from game of thrones", "quote from thrones"], r: [] },
     { id: "philosophy_quote", w: ["quote", "quotes", "a quote", "give me a quote", "philosophy quote", "philosopher quote", "wise quote", "deep quote", "inspirational quote", "random quote", "say something wise", "something philosophical"], r: [] },
+    // ----- PROJECT HAIL MARY -----
+    // Original lines written in homage to the story and to Rocky's friendly, broken-English speech pattern,
+    // not quotes taken from the film or book (the published dialogue is copyrighted and isn't reproduced here).
+    { id: "hail_mary", w: ["project hail mary", "hail mary", "astrophage", "taumoeba", "40 eridani", "eridani", "stratt", "ryland grace", "beetles language", "amaze", "hail mary mission"], r: [
+      "Astrophage, little space bug that ruins stars. Science problem, science solution!",
+      "Taumoeba is the best worst roommate anyone ever had.",
+      "40 Eridani is a long way to go just to save the sun.",
+      "The Hail Mary carried one lonely human and came back with a friend.",
+      "Admiral Stratt would get this done, no excuses, no time to waste.",
+      "Coma, confusion, two dead crewmates, and somehow still a happy ending. That's the mission.",
+      "Beetles, question marks, and music made of frequencies. Best first-contact language ever."] },
+    { id: "rocky", w: ["rocky", "whos rocky", "who is rocky", "tell me about rocky", "rocky the alien", "eridian"], r: [
+      "Good good good! Rocky is the best friend a stranded astronaut ever found.",
+      "Five legs, built like a tank, and allergic to giving up. That's Rocky.",
+      "Rocky communicates in musical tones because sound travels better than light down there. Clever, right?",
+      "Named after a boxer who kept getting back up. Fitting, honestly.",
+      "Rocky's ship runs on xenonite. Mine runs on coffee. We're not so different.",
+      "If Rocky can rebuild a melted spaceship by hand, I can get through this Tuesday."] },
+
     { id: "greet", w: ["hello", "hi", "hey", "hiya", "howdy", "greetings", "yo", "hey there", "hello there", "hi there", "good day", "heya", "hallo"], r: [
       "Hey there!", "Hello! Nice to see you.", "Hi! What's on your mind?", "Howdy!",
       "Greetings, human.", "Hey hey! How's it going?", "Hello again!", "Hi there, welcome back!"] },
@@ -453,6 +472,18 @@
     }
   }
 
+  // Short original lines in homage to Rocky's friendly, broken-English speech pattern (not quotes from the
+  // film or book). Sprinkled onto ordinary chat so the terminal "quotes Rocky" often, without it taking over
+  // topics that already give a real answer (weather, the two quote commands, and Rocky's own topic).
+  const rockyFlourishLines = [
+    "Good good good!", "Science good. We figure out together.", "Determination! That is the way.",
+    "Eleven out of ten, very good.", "We same, you and me, just different legs.", "Problem is good. Problem means we learn.",
+    "Four hundred billion dollars and one good friend. Worth it.", "Small steps still steps.", "You are very good human, for human."
+  ];
+  function rockyFlourish(text) {
+    return Math.random() < 0.25 ? text + "\n   (Rocky: \u201C" + pick("rockyflourish", rockyFlourishLines) + "\u201D)" : text;
+  }
+
   async function reply(raw) {
     const norm = raw.toLowerCase().replace(/'/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
     const words = norm.split(" ");
@@ -462,11 +493,12 @@
           if (it.id === "weather") return await weather(norm);
           if (it.id === "got_quote") return await gotQuote();
           if (it.id === "philosophy_quote") return await philosopherQuote();
-          return pick(it.id, it.r);
+          const text = pick(it.id, it.r);
+          return (it.id === "rocky" || it.id === "hail_mary") ? text : rockyFlourish(text);
         }
       }
     }
-    return pick("fallback", fallbacks);
+    return rockyFlourish(pick("fallback", fallbacks));
   }
 
   input.addEventListener("keydown", async (e) => {
